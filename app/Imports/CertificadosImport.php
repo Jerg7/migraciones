@@ -2,7 +2,7 @@
 
 namespace App\Imports;
 
-use App\Exports\certificadosExport;
+use App\Exports\CertificadosExport;
 use App\Http\Controllers\CertificadoController;
 use App\Http\Controllers\TerceroController;
 use App\Models\Contrato;
@@ -16,7 +16,7 @@ use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Excel;
 
-class certificadosImport implements ToCollection, WithChunkReading, WithHeadingRow, WithBatchInserts
+class CertificadosImport implements ToCollection, WithChunkReading, WithHeadingRow, WithBatchInserts
 {
     public $errores;
     public $contrato_id;
@@ -102,15 +102,7 @@ class certificadosImport implements ToCollection, WithChunkReading, WithHeadingR
 
         //* Agrupamos los errores
         $this->errores = array_merge($this->errores, $titulares, $familiares);
-
-        if ( !empty($this->errores) ) {
-            $numero_contrato = Contrato::find($this->contrato_id)->num_contrato;
-            $fecha_actual = now()->format('Y-m-d');
-            $contador_errores = count($this->errores);
-            Log::info("Se han encontrado {$contador_errores} errores en la carga de certificados para el contrato {$numero_contrato}");
-            Excel::store(new certificadosExport($this->errores), "errores_carga_{$numero_contrato}_{$fecha_actual}");
-        }
-
+        
         return [
             'status' => 200,
             'message' => 'Certificados cargados correctamente, sin errores ni omisiones.',

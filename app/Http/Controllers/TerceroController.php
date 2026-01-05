@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tercero;
+use App\Models\TercerosPerfile;
 use DB;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Validator;
 
@@ -54,8 +57,19 @@ class TerceroController extends Controller
 
             //* Insertamos el tercero y capturamos el resultado
             $tercero = DB::connection('mysql')->transaction(function () use ($tercero_nuevo) {
-                return Tercero::create($tercero_nuevo);
+                try {
+                    $tercero = Tercero::create($tercero_nuevo);
+
+                    TercerosPerfile::create([
+                        'tercero_id' => $tercero->id_terceros,
+                        'asegurado_id' => '1'
+                    ]);
+                } catch (QueryException $qe) {
+                    Log::error($qe->getMessage(), $tercero_nuevo);
+                }
             });
+            
+            return $tercero;
         }
 
         //* Retornamos el id del tercero existente
