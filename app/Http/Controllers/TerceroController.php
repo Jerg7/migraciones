@@ -39,7 +39,7 @@ class TerceroController extends Controller
         );
 
         //* Si no existe el tercero lo registramos
-        if ( !$tercero ) {
+        if ( !$tercero["tercero"] ) {
             //* Ordenamos los datos a insertar del tercero
             $tercero_nuevo = [
                 'cod_documento' => $tipo_documento->id,
@@ -52,8 +52,8 @@ class TerceroController extends Controller
 
             //* Asignamos el rif o la cedula al arreglo del tercero
             in_array($array_terceros['codigo_documento'], ['V', 'E', 'P', 'M']) 
-                ? $tercero_nuevo['cedula'] = $array_terceros['documento'] 
-                : $tercero_nuevo['rif'] = $array_terceros['documento']; 
+                ? $tercero_nuevo['cedula'] = $tercero['documento'] 
+                : $tercero_nuevo['rif'] = $tercero['documento']; 
 
             //* Insertamos el tercero y capturamos el resultado
             $tercero = DB::connection('mysql')->transaction(function () use ($tercero_nuevo) {
@@ -128,7 +128,10 @@ class TerceroController extends Controller
         })
         ->first();
 
-        return $tercero;
+        return [
+            "tercero" => $tercero,
+            "documento" => $documento
+        ];
 
     }
 }
