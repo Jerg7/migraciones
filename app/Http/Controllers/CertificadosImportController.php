@@ -12,31 +12,45 @@ use Validator;
 
 class CertificadosImportController extends Controller
 {
-    /**
+/**
      * @OA\Post(
-     *      path="/api/certificados/import",
-     *      operationId="import",
-     *      tags={"Certificados"},
-     *      summary="Importar certificados",
-     *      description="Importar certificados desde archivo Excel",
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"archivo","contrato_id"},
-     *              @OA\Property(property="archivo", type="string", format="file", example="user@example.com"),
-     *              @OA\Property(property="contrato_id", type="integer", example="secret")
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Certificados importados correctamente",
-     *          @OA\JsonContent(
-     *              @OA\Property(property="status", type="string", example="success"),
-     *              @OA\Property(property="message", type="string", example="Certificados importados correctamente."),
-     *          )
-     *      ),
-     *      @OA\Response(response=401, description="Credenciales inválidas"),
-     *      @OA\Response(response=422, description="Error de validación")
+     *     path="/api/certificados/import",
+     *     operationId="import",
+     *     tags={"Certificados"},
+     *     summary="Importar certificados",
+     *     description="Importar certificados desde archivo Excel",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del formulario de importación",
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                  required={"archivo", "contrato_id"},
+     *                  @OA\Property(
+     *                      property="archivo",
+     *                      description="Archivo Excel (.xlsx, .xls)",
+     *                      type="string",
+     *                      format="binary"
+     *                  ),
+     *             @OA\Property(
+     *     property="contrato_id",
+     *     description="ID del contrato asociado",
+     *     type="integer",
+     *     example=1
+     * )
+     * )
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Certificados importados correctamente",
+     * @OA\JsonContent(
+     * @OA\Property(property="status", type="string", example="success"),
+     * @OA\Property(property="message", type="string", example="Certificados importados correctamente."),
+     * )
+     * ),
+     * @OA\Response(response=401, description="Credenciales inválidas"),
+     * @OA\Response(response=422, description="Error de validación")
      * )
      *
      * @param Request $request
