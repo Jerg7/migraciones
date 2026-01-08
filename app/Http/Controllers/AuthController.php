@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-use Validator;
+use Illuminate\Support\Facades\Validator;
 
 use OpenApi\Attributes as OA;
 
@@ -49,15 +49,20 @@ class AuthController extends Controller
     #[OA\Response(response: 422, description: "Error de validación")]
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        $credentials = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required',
+            ],
+            [
+                'required' => 'El :attribute es obligatorio.',
+                'email' => 'El :attribute debe ser un correo electrónico válido.',
+            ]
+        );
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
             
-            // Eliminamos tokens anteriores para limpieza (opcional)
+            // Eliminamos tokens anteriores para limpieza
             // $user->tokens()->delete();
             
             // Creamos un nuevo token
