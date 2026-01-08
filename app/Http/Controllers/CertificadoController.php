@@ -4,10 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Certificado;
 use App\Models\CertificadosTercero;
-use DB;
 use Doctrine\DBAL\Query\QueryException;
-use Illuminate\Http\Request;
-use Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CertificadoController extends Controller
 {

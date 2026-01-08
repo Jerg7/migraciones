@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tercero;
-use DB;
-use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
-use Validator;
+use App\Models\TercerosPerfile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 
 class TerceroController extends Controller
 {
@@ -36,7 +36,7 @@ class TerceroController extends Controller
         );
 
         //* Si no existe el tercero lo registramos
-        if ( !$tercero ) {
+        if ( !$tercero["tercero"] ) {
             //* Ordenamos los datos a insertar del tercero
             $tercero_nuevo = [
                 'cod_documento' => $tipo_documento->id,
@@ -49,13 +49,24 @@ class TerceroController extends Controller
 
             //* Asignamos el rif o la cedula al arreglo del tercero
             in_array($array_terceros['codigo_documento'], ['V', 'E', 'P', 'M']) 
-                ? $tercero_nuevo['cedula'] = $array_terceros['documento'] 
-                : $tercero_nuevo['rif'] = $array_terceros['documento']; 
+                ? $tercero_nuevo['cedula'] = $tercero['documento'] 
+                : $tercero_nuevo['rif'] = $tercero['documento']; 
 
             //* Insertamos el tercero y capturamos el resultado
             $tercero = DB::connection('mysql')->transaction(function () use ($tercero_nuevo) {
-                return Tercero::create($tercero_nuevo);
+                try {
+                    $tercero = Tercero::create($tercero_nuevo);
+
+                    TercerosPerfile::create([
+                        'tercero_id' => $tercero->id_terceros,
+                        'asegurado_id' => '1'
+                    ]);
+                } catch (QueryException $qe) {
+                    Log::error($qe->getMessage(), $tercero_nuevo);
+                }
             });
+            
+            return $tercero;
         }
 
         //* Retornamos el id del tercero existente
@@ -79,7 +90,7 @@ class TerceroController extends Controller
     )
     {
         if ( $codigo_documento === 6 ) {
-            $tercero_menor = Tercero::whereLike('cedula', substr($documento, 0, -1));
+            $tercero_menor = Tercero::where('cedula', 'like', "%" . substr($documento, 0, -1));
             $contar_tercero_menor = $tercero_menor->count();
 
             //* Si existe un tercero menor para esta cedula
@@ -103,6 +114,12 @@ class TerceroController extends Controller
                 //* Si no coincide el nombre suficiente, seguimos aumentando el conteo de terceros asociados
                 $documento = "{$documento}{$contar_tercero_menor}";
             }
+
+            //* Si el conteo es es cero, implica que no esta cargado el padre del menor, por lo que no se puede cargar el menor
+            if ( $contar_tercero_menor === 0 ) {
+                return null;
+            }
+            
         }
 
         //* Consultamos el tercero
@@ -114,7 +131,10 @@ class TerceroController extends Controller
         })
         ->first();
 
-        return $tercero;
+        return [
+            "tercero" => $tercero,
+            "documento" => $documento
+        ];
 
     }
 }

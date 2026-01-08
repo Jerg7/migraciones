@@ -1,0 +1,202 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Migraciones API",
+        "description": "Documentación de la API de Migraciones",
+        "contact": {
+            "email": "admin@admin.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "API Server"
+        }
+    ],
+    "paths": {
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Iniciar sesión",
+                "description": "Devuelve un token de acceso",
+                "operationId": "login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "user@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Inicio de sesión exitoso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Inicio de sesión exitoso."
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "1|AbCdEf123456..."
+                                        },
+                                        "user": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Credenciales inválidas"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/importar-certificados": {
+            "post": {
+                "tags": [
+                    "Certificados"
+                ],
+                "summary": "Importar certificados",
+                "description": "Importar certificados desde archivo Excel",
+                "operationId": "import",
+                "requestBody": {
+                    "description": "Datos del formulario de importación",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "archivo",
+                                    "contrato_id"
+                                ],
+                                "properties": {
+                                    "archivo": {
+                                        "description": "Archivo Excel (.xlsx, .xls)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "contrato_id": {
+                                        "description": "ID del contrato asociado",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Certificados importados correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Certificados importados correctamente."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Credenciales inválidas"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/check": {
+            "get": {
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Check API Status",
+                "operationId": "6747170714f031882b36f918e28d211a",
+                "responses": {
+                    "200": {
+                        "description": "API is healthy"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Ingrese el token generado en el login",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Auth"
+        },
+        {
+            "name": "Certificados",
+            "description": "Certificados"
+        },
+        {
+            "name": "Health",
+            "description": "Health"
+        }
+    ]
+}

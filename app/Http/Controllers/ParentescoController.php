@@ -15,7 +15,7 @@ class ParentescoController extends Controller
      */
     public function getParentesco(string $descripcion)
     {
-        $parentesco = Parentesco::where('desc_parentesco', 'LIKE', "%{$descripcion}%")->first();
+        $parentesco = Parentesco::where('desc_parentesco', 'LIKE', "%{$descripcion}")->first();
         return $parentesco->id;
     }
 }
