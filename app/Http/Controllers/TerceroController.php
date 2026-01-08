@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Tercero;
 use App\Models\TercerosPerfile;
-use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
-use Validator;
 
 class TerceroController extends Controller
 {
@@ -93,7 +90,7 @@ class TerceroController extends Controller
     )
     {
         if ( $codigo_documento === 6 ) {
-            $tercero_menor = Tercero::whereLike('cedula', substr($documento, 0, -1));
+            $tercero_menor = Tercero::where('cedula', 'like', "%" . substr($documento, 0, -1));
             $contar_tercero_menor = $tercero_menor->count();
 
             //* Si existe un tercero menor para esta cedula
@@ -117,6 +114,12 @@ class TerceroController extends Controller
                 //* Si no coincide el nombre suficiente, seguimos aumentando el conteo de terceros asociados
                 $documento = "{$documento}{$contar_tercero_menor}";
             }
+
+            //* Si el conteo es es cero, implica que no esta cargado el padre del menor, por lo que no se puede cargar el menor
+            if ( $contar_tercero_menor === 0 ) {
+                return null;
+            }
+            
         }
 
         //* Consultamos el tercero

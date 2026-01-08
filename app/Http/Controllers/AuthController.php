@@ -7,41 +7,46 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Validator;
 
+use OpenApi\Attributes as OA;
+
 class AuthController extends Controller
 {
     /**
-     * @OA\Post(
-     *      path="/api/login",
-     *      operationId="login",
-     *      tags={"Auth"},
-     *      summary="Iniciar sesión",
-     *      description="Devuelve un token de acceso",
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"email","password"},
-     *              @OA\Property(property="email", type="string", format="email", example="user@example.com"),
-     *              @OA\Property(property="password", type="string", format="password", example="secret")
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Inicio de sesión exitoso",
-     *          @OA\JsonContent(
-     *              @OA\Property(property="status", type="string", example="success"),
-     *              @OA\Property(property="message", type="string", example="Inicio de sesión exitoso."),
-     *              @OA\Property(property="token", type="string", example="1|AbCdEf123456..."),
-     *              @OA\Property(property="user", type="object")
-     *          )
-     *      ),
-     *      @OA\Response(response=401, description="Credenciales inválidas"),
-     *      @OA\Response(response=422, description="Error de validación")
-     * )
-     *
      * Iniciar sesión y generar token
      * 
      * @param Request $request
      */
+    #[OA\Post(
+        path: "/api/login",
+        operationId: "login",
+        tags: ["Auth"],
+        summary: "Iniciar sesión",
+        description: "Devuelve un token de acceso"
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["email", "password"],
+            properties: [
+                new OA\Property(property: "email", type: "string", format: "email", example: "user@example.com"),
+                new OA\Property(property: "password", type: "string", format: "password", example: "secret")
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Inicio de sesión exitoso",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Inicio de sesión exitoso."),
+                new OA\Property(property: "token", type: "string", example: "1|AbCdEf123456..."),
+                new OA\Property(property: "user", type: "object")
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: "Credenciales inválidas")]
+    #[OA\Response(response: 422, description: "Error de validación")]
     public function login(Request $request)
     {
         $credentials = $request->validate([

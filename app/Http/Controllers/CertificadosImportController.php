@@ -8,53 +8,59 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Contrato;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Validator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use OpenApi\Attributes as OA;
 
 class CertificadosImportController extends Controller
 {
-/**
-     * @OA\Post(
-     *     path="/api/certificados/import",
-     *     operationId="import",
-     *     tags={"Certificados"},
-     *     summary="Importar certificados",
-     *     description="Importar certificados desde archivo Excel",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         description="Datos del formulario de importación",
-     *         @OA\MediaType(
-     *             mediaType="multipart/form-data",
-     *             @OA\Schema(
-     *                  required={"archivo", "contrato_id"},
-     *                  @OA\Property(
-     *                      property="archivo",
-     *                      description="Archivo Excel (.xlsx, .xls)",
-     *                      type="string",
-     *                      format="binary"
-     *                  ),
-     *             @OA\Property(
-     *     property="contrato_id",
-     *     description="ID del contrato asociado",
-     *     type="integer",
-     *     example=1
-     * )
-     * )
-     * )
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Certificados importados correctamente",
-     * @OA\JsonContent(
-     * @OA\Property(property="status", type="string", example="success"),
-     * @OA\Property(property="message", type="string", example="Certificados importados correctamente."),
-     * )
-     * ),
-     * @OA\Response(response=401, description="Credenciales inválidas"),
-     * @OA\Response(response=422, description="Error de validación")
-     * )
-     *
+    /**
      * @param Request $request
      */
+    #[OA\Post(
+        path: "/api/importar-certificados",
+        operationId: "import",
+        tags: ["Certificados"],
+        summary: "Importar certificados",
+        description: "Importar certificados desde archivo Excel",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        description: "Datos del formulario de importación",
+        content: new OA\MediaType(
+            mediaType: "multipart/form-data",
+            schema: new OA\Schema(
+                required: ["archivo", "contrato_id"],
+                properties: [
+                    new OA\Property(
+                        property: "archivo",
+                        description: "Archivo Excel (.xlsx, .xls)",
+                        type: "string",
+                        format: "binary"
+                    ),
+                    new OA\Property(
+                        property: "contrato_id",
+                        description: "ID del contrato asociado",
+                        type: "integer",
+                        example: 1
+                    )
+                ]
+            )
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Certificados importados correctamente",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Certificados importados correctamente.")
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: "Credenciales inválidas")]
+    #[OA\Response(response: 422, description: "Error de validación")]
     public function import(Request $request)
     {
         $validacion = Validator::make(
@@ -63,7 +69,7 @@ class CertificadosImportController extends Controller
                 'contrato_id' => [
                     'required', 
                     'integer', 
-                    \Illuminate\Validation\Rule::exists('mysql_personas.contrato', 'id_contrato')
+                    Rule::exists('mysql_personas.contrato', 'id_contrato')
                 ]
             ],
             [
@@ -86,8 +92,7 @@ class CertificadosImportController extends Controller
 
         try {
             $file = $request->file('archivo');
-            $contrato_id = $request->input('contrato_id');
-
+            $contrato_id = $request->contrato_id;
             $import = new CertificadosImport($contrato_id);
             
             Excel::import($import, $file);

@@ -9,7 +9,7 @@ use App\Models\Contrato;
 use Carbon\Carbon;
 use DateTime;
 use Illuminate\Support\Collection;
-use Log;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
@@ -52,6 +52,7 @@ class CertificadosImport implements ToCollection, WithChunkReading, WithHeadingR
         $array_familiares = [];
 
         foreach ( $collection as $row ) {
+            dump($row);die;
             //* Convertimos la fecha de excel a formato Y/m/d
             $fecha_excel = $this->convertirFechaExcel(trim($row['fnac']));
 
