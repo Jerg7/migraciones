@@ -29,7 +29,7 @@ class AuthController extends Controller
             required: ["email", "password"],
             properties: [
                 new OA\Property(property: "email", type: "string", format: "email", example: "user@example.com"),
-                new OA\Property(property: "password", type: "string", format: "password", example: "secret")
+                new OA\Property(property: "password", type: "string", format: "password", example: "secret"),
             ]
         )
     )]
@@ -58,6 +58,14 @@ class AuthController extends Controller
                 'email' => 'El :attribute debe ser un correo electrónico válido.',
             ]
         );
+
+        if ($credentials->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error de validación',
+                'errors' => $credentials->errors()
+            ], 422);
+        }
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
