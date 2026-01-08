@@ -106,7 +106,10 @@ class TerceroController extends Controller
                         //* Si la similitud es superior al 80%, consideramos que es la misma persona
                         if ( $porcentaje > 80 ) {
                             //* Retornamos el tercero existente
-                            return $candidato;
+                            return [
+                                "tercero" => $candidato,
+                                "documento" => $documento
+                            ];
                         }
                     }    
                 }
@@ -117,9 +120,11 @@ class TerceroController extends Controller
 
             //* Si el conteo es es cero, implica que no esta cargado el padre del menor, por lo que no se puede cargar el menor
             if ( $contar_tercero_menor === 0 ) {
-                return null;
+                return [
+                    "tercero" => null,
+                    "documento" => $documento
+                ];
             }
-            
         }
 
         //* Consultamos el tercero
