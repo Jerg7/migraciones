@@ -73,12 +73,11 @@ class CertificadosImportController extends Controller
                 ]
             ],
             [
-                'archivo.required' => 'El archivo es obligatorio.',
-                'archivo.file' => 'El archivo debe ser un archivo.',
-                'archivo.mimes' => 'El archivo debe ser un archivo .xlsx o .xls.',
-                'contrato_id.required' => 'El contrato es obligatorio.',
-                'contrato_id.integer' => 'El contrato debe ser un número entero.',
-                'contrato_id.exists' => 'El contrato no existe.',
+                'required' => 'El :attribute es obligatorio.',
+                'file' => 'El :attribute debe ser un archivo Excel.',
+                'mimes' => 'El :attribute debe ser un archivo de tipo :values.',
+                'integer' => 'El :attribute debe ser un número entero.',
+                'exists' => 'El :attribute no existe.',
             ]
         );
 
