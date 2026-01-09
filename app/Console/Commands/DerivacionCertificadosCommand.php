@@ -40,7 +40,7 @@ class DerivacionCertificadosCommand extends Command
             return 1;
         }
 
-        $this->info("Número recibido: {$poliza_antigua}");
+        $this->info("Número de póliza antigua: {$poliza_antigua}");
 
         $opcion = $this->choice(
             '¿Qué acción deseas realizar con esta póliza?', 
