@@ -190,6 +190,7 @@ class DerivacionCertificadosCommand extends Command
             'parentesco_id' => $certificado->parentesco_id,
             'fecha_ingreso' => now()->format('Y-m-d'),
             'status' => 'ACTIVO',
+            'estatus_ingreso' => 'RENOVADO'
         ]);
     }
 
