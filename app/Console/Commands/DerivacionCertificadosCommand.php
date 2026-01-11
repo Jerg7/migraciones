@@ -2,7 +2,8 @@
 
 namespace App\Console\Commands;
 
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Console\Command;
 
 class DerivacionCertificadosCommand extends Command
@@ -99,6 +100,8 @@ class DerivacionCertificadosCommand extends Command
 
         $poliza_nueva = $this->ask('Por favor, ingrese el nuevo número de póliza renovada:');
 
+        $fecha_ingreso = $this->ask('Por favor, ingrese la fecha de ingreso:');
+
         //* Obtenemos el id_contrato de la poliza renovada
         $contrato_id_nuevo = DB::connection('mysql_personas')->table('contrato')
         ->where('num_contrato', $poliza_nueva)
@@ -111,26 +114,27 @@ class DerivacionCertificadosCommand extends Command
         $bar->start();
 
         //* Inicia transacción de derivación de certificados
-        DB::transaction(function () use ($data_activa_poliza, $contrato_id_nuevo, $opcion, $bar) {
+        DB::transaction(function () use ($data_activa_poliza, $contrato_id_nuevo, $opcion, $bar, $fecha_ingreso, $poliza_nueva) {
             switch ( $opcion ) {
                 case 'Carga de titulares':
                     foreach ($data_activa_poliza as $certificado) {
-                        $this->createCertificadosTitulares($certificado, $contrato_id_nuevo);
+                        $this->createCertificadosTitulares($certificado, $contrato_id_nuevo, $fecha_ingreso);
                         $bar->advance();
                     }
                     break;
                 case 'Carga completa':
                     foreach ($data_activa_poliza as $certificado) {
                         if ( $certificado->parentesco_id == 5 ) {
-                            $this->createCertificadosTitulares($certificado, $contrato_id_nuevo);
+                            $this->createCertificadosTitulares($certificado, $contrato_id_nuevo, $fecha_ingreso);
                         } else {
                             $certificado_id = $this->obtenerCertificadoId($certificado->codigo_certificado, $contrato_id_nuevo);
                             if ( !$certificado_id ) {
                                 $bar->advance();
+                                Log::info("Certificado {$certificado->codigo_certificado} no encontrado para la poliza {$poliza_nueva}");
                                 continue;
                             }
 
-                            $this->crearCertificadoTercero($certificado, $certificado_id);
+                            $this->crearCertificadoTercero($certificado, $certificado_id, $fecha_ingreso);
                         }
                         $bar->advance();
                     }
@@ -139,11 +143,12 @@ class DerivacionCertificadosCommand extends Command
                     foreach ($data_activa_poliza as $certificado) {
                         $certificado_id = $this->obtenerCertificadoId($certificado->codigo_certificado, $contrato_id_nuevo);
                         if ( !$certificado_id ) {
+                            Log::info("Certificado {$certificado->codigo_certificado} no encontrado para la poliza {$poliza_nueva}");
                             $bar->advance();
                             continue;
                         }
 
-                        $this->crearCertificadoTercero($certificado, $certificado_id);
+                        $this->crearCertificadoTercero($certificado, $certificado_id, $fecha_ingreso);
                         $bar->advance();
                     }
                     break;
@@ -161,8 +166,9 @@ class DerivacionCertificadosCommand extends Command
      * 
      * @param object $certificado
      * @param int $contrato_id_nuevo
+     * @param string $fecha_ingreso
      */
-    public function createCertificadosTitulares(object $certificado, int $contrato_id_nuevo)
+    public function createCertificadosTitulares(object $certificado, int $contrato_id_nuevo, string $fecha_ingreso)
     {
         $certificado_id = DB::connection('mysql_personas')->table('certificados_terceros')
         ->insertGetId([
@@ -172,7 +178,7 @@ class DerivacionCertificadosCommand extends Command
             'status' => 'ACTIVO',
         ]);
 
-        $this->crearCertificadoTercero($certificado, $certificado_id);
+        $this->crearCertificadoTercero($certificado, $certificado_id, $fecha_ingreso);
     }
 
     /**
@@ -180,15 +186,16 @@ class DerivacionCertificadosCommand extends Command
      * 
      * @param object $certificado
      * @param int $certificado_id
+     * @param string $fecha_ingreso
      */
-    public function crearCertificadoTercero(object $certificado, int $certificado_id)
+    public function crearCertificadoTercero(object $certificado, int $certificado_id, string $fecha_ingreso)
     {
         DB::connection('mysql_personas')->table('certificados_terceros')
         ->insert([
             'certificado_id' => $certificado_id,
             'tercero_id' => $certificado->tercero_id,
             'parentesco_id' => $certificado->parentesco_id,
-            'fecha_ingreso' => now()->format('Y-m-d'),
+            'fecha_ingreso' => $fecha_ingreso,
             'status' => 'ACTIVO',
             'estatus_ingreso' => 'RENOVADO'
         ]);
