@@ -71,6 +71,7 @@ class DerivacionCertificadosCommand extends Command
         ->join('certificados', 'contrato.id_contrato', 'certificados.contrato_id')
         ->join('certificados_terceros', 'certificados.id', 'certificados_terceros.certificado_id')
         ->join('ridosm_general.parentesco', 'certificados_terceros.parentesco_id', 'parentesco.id')
+        ->join('ridosm_general.terceros', 'certificados_terceros.tercero_id', 'terceros.id_terceros')
         ->when($opcion === 'Carga de titulares', function ($query) {
             return $query->where('parentesco.desc_parentesco', 'LIKE', '%TITULAR%');
         })
@@ -78,15 +79,13 @@ class DerivacionCertificadosCommand extends Command
             return $query->where('parentesco.desc_parentesco', 'NOT LIKE', '%TITULAR%');
         })
         ->when($opcion === 'Carga de beneficiarios sin menores', function ($query) {
-            return $query->join('ridosm_general.terceros', 'certificados_terceros.tercero_id', 'terceros.id_terceros')
-            ->join('ridosm_general.tipo_documento', 'terceros.cod_documento', 'tipo_documento.cod_documento')
+            return $query->join('ridosm_general.tipo_documento', 'terceros.cod_documento', 'tipo_documento.cod_documento')
             ->where('tipo_documento.siglas', '!=', 'M')
             ->where('parentesco.desc_parentesco', 'NOT LIKE', '%HIJO%')
             ->where('parentesco.desc_parentesco', 'NOT LIKE', '%TITULAR%');
         })
         ->when($opcion === 'Carga de menores', function ($query) {
-            return $query->join('ridosm_general.terceros', 'certificados_terceros.tercero_id', 'terceros.id_terceros')
-            ->join('ridosm_general.tipo_documento', 'terceros.cod_documento', 'tipo_documento.cod_documento')
+            return $query->join('ridosm_general.tipo_documento', 'terceros.cod_documento', 'tipo_documento.cod_documento')
             ->where('tipo_documento.siglas', 'M')
             ->where('parentesco.desc_parentesco', 'LIKE', '%HIJO%');
         })
@@ -94,7 +93,9 @@ class DerivacionCertificadosCommand extends Command
         ->where('certificados_terceros.status', 'ACTIVO')
         ->select([
             'certificados_terceros.*',
-            'certificados.codigo_certificado'
+            'certificados.codigo_certificado',
+            'terceros.*',
+            'parentesco.desc_parentesco'
         ])
         ->get();
         
@@ -167,8 +168,9 @@ class DerivacionCertificadosCommand extends Command
                             if ( !$certificado_id ) {
                                 $errores[] = [
                                     'codigo_certificado' => $certificado->codigo_certificado,
-                                    'tercero_id' => $certificado->tercero_id,
-                                    'parentesco_id' => $certificado->parentesco_id,
+                                    'nombre' => $certificado->nombre_razonsocial,
+                                    'apellido' => $certificado->apellido,
+                                    'parentesco' => $certificado->desc_parentesco,
                                     'error' => 'Certificado/Titular no encontrado'
                                 ];
                                 $bar->advance();
@@ -196,10 +198,15 @@ class DerivacionCertificadosCommand extends Command
                     foreach ($data_activa_poliza as $certificado) {
                         $certificado_id = $this->obtenerCertificadoId($certificado->codigo_certificado, $contrato_id_nuevo);
                         if ( !$certificado_id ) {
+                            $tercero_data = DB::connection('mysql')->table('terceros')
+                                ->where('id_terceros', $certificado->tercero_id)
+                                ->first();
+
                             $errores[] = [
                                 'codigo_certificado' => $certificado->codigo_certificado,
-                                'tercero_id' => $certificado->tercero_id,
-                                'parentesco_id' => $certificado->parentesco_id,
+                                'nombre' => $tercero_data->nombre_razonsocial,
+                                'apellido' => $tercero_data->apellido,
+                                'parentesco' => $certificado->desc_parentesco,
                                 'error' => 'Certificado/Titular no encontrado'
                             ];
                             $bar->advance();

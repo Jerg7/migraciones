@@ -23,8 +23,9 @@ class DerivacionErroresExport implements FromArray, WithHeadings
     {
         return [
             'Código Certificado',
-            'Tercero ID',
-            'Parentesco ID',
+            'Nombre',
+            'Apellido',
+            'Parentesco',
             'Error',
         ];
     }
