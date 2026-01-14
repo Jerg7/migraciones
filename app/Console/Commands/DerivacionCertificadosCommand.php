@@ -29,6 +29,7 @@ class DerivacionCertificadosCommand extends Command
      */
     public function handle()
     {
+        // Ultimo certificado 2003670
         $poliza_antigua = $this->argument('numero');
 
         // Si no se pasó el argumento, solicitarlo de manera interactiva
@@ -125,10 +126,12 @@ class DerivacionCertificadosCommand extends Command
                     ->join('certificados', 'certificados.id', 'certificados_terceros.certificado_id')
                     ->join('ridosm_general.terceros', 'terceros.id_terceros', 'certificados_terceros.tercero_id')
                     ->leftJoin('siniestros', 'siniestros.certificados_terceros_id', 'certificados_terceros.id')
+                    ->leftJoin('ridosm_general.solicitudes_servicios', 'solicitudes_servicios.certificado_tercero_id', 'certificados_terceros.id')
                     ->where('certificados.contrato_id', $contrato_id_nuevo)
                     ->where('terceros.cod_documento', 6)
                     ->where('certificados_terceros.parentesco_id', 3)
                     ->whereNull('siniestros.id_siniestro')
+                    ->whereNull('solicitudes_servicios.id')
                     ->count();
 
                 $this->info("Se eliminarán {$contar_menores_sin_siniestro} menores que no poseen siniestros previamente cargados en la póliza nueva...");
@@ -188,10 +191,12 @@ class DerivacionCertificadosCommand extends Command
                             ->join('certificados', 'certificados.id', 'certificados_terceros.certificado_id')
                             ->join('ridosm_general.terceros', 'terceros.id_terceros', 'certificados_terceros.tercero_id')
                             ->leftJoin('siniestros', 'siniestros.certificados_terceros_id', 'certificados_terceros.id')
+                            ->leftJoin('ridosm_general.solicitudes_servicios', 'solicitudes_servicios.certificado_tercero_id', 'certificados_terceros.id')
                             ->where('certificados.contrato_id', $contrato_id_nuevo)
                             ->where('terceros.cod_documento', 6)
                             ->where('certificados_terceros.parentesco_id', 3)
                             ->whereNull('siniestros.id_siniestro')
+                            ->whereNull('solicitudes_servicios.id')
                             ->delete();
                     }
 

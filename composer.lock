@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4ca9923268ec8a11db4c12fb0cafe2ce",
+    "content-hash": "53aae341b2e906522f5b8fe203e46c98",
     "packages": [
         {
             "name": "brick/math",
@@ -4068,6 +4068,70 @@
                 "source": "https://github.com/ramsey/uuid/tree/4.9.2"
             },
             "time": "2025-12-14T04:43:48+00:00"
+        },
+        {
+            "name": "ricorocks-digital-agency/soap",
+            "version": "3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Ricorocks-Digital-Agency/Soap.git",
+                "reference": "a395e505d67f8dd554b4815f11bfd4e37b6e12ca"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Ricorocks-Digital-Agency/Soap/zipball/a395e505d67f8dd554b4815f11bfd4e37b6e12ca",
+                "reference": "a395e505d67f8dd554b4815f11bfd4e37b6e12ca",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^11.0|^12.0",
+                "php": "^8.2|^8.3|^8.4"
+            },
+            "require-dev": {
+                "ext-soap": "*",
+                "laravel/pint": "^1.14",
+                "mockery/mockery": "^1.4",
+                "orchestra/testbench": "^9.0|^10.0",
+                "pestphp/pest": "^3.7.4",
+                "phpoption/phpoption": "^1.8.1",
+                "spatie/ray": "^1.17"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Soap": "RicorocksDigitalAgency\\Soap\\Facades\\Soap"
+                    },
+                    "providers": [
+                        "RicorocksDigitalAgency\\Soap\\Providers\\SoapServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "RicorocksDigitalAgency\\Soap\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Luke Downing",
+                    "email": "luke@ricorocks.agency"
+                },
+                {
+                    "name": "Sam Rowden",
+                    "email": "sam@ricorocks.agency"
+                }
+            ],
+            "description": "A SOAP client that provides a clean interface for handling requests and responses.",
+            "support": {
+                "issues": "https://github.com/Ricorocks-Digital-Agency/Soap/issues",
+                "source": "https://github.com/Ricorocks-Digital-Agency/Soap/tree/3.0.0"
+            },
+            "time": "2025-02-27T11:53:23+00:00"
         },
         {
             "name": "swagger-api/swagger-ui",
