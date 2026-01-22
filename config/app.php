@@ -123,4 +123,14 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'api' => [
+        'inma' => [
+            'url' => env('URL_API_INMA'),
+            'user' => env('API_USER_INMA'),
+            'password' => env('API_PASSWORD_INMA'),
+            'user_web' => env('API_USER_INMA_WEB'),
+            'password_web' => env('API_PASSWORD_INMA_WEB'),
+        ],
+    ],
+
 ];
