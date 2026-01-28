@@ -28,7 +28,7 @@ class CloneBaseDatosCommand extends Command
     {
         $origen = $this->ask('Ingrese el nombre de la base de datos de origen');
         $destino = $this->ask('Ingrese el nombre de la base de datos de destino');
-        $sufijo = $this->ask('Ingrese el sufijo de la base de datos de destino');
+        $prefijo = $this->ask('Ingrese el prefijo de la base de datos de destino');
 
         $this->info("🚀 Arrancando la clonación de '{$origen}' a '{$destino}'...");
 
@@ -54,13 +54,13 @@ class CloneBaseDatosCommand extends Command
                 $nombre_tabla = $tabla->TABLE_NAME;
 
                 // Borramos si existe en el destino (para empezar limpio)
-                DB::statement("DROP TABLE IF EXISTS `{$destino}`.`{$nombre_tabla}_{$sufijo}`");
+                DB::statement("DROP TABLE IF EXISTS `{$destino}`.`{$prefijo}_{$nombre_tabla}`");
 
                 // Creamos la estructura (sin relaciones todavía)
-                DB::statement("CREATE TABLE `{$destino}`.`{$nombre_tabla}_{$sufijo}` LIKE `{$origen}`.`{$nombre_tabla}`");
+                DB::statement("CREATE TABLE `{$destino}`.`{$prefijo}_{$nombre_tabla}` LIKE `{$origen}`.`{$nombre_tabla}`");
 
                 // Inyectamos la data
-                DB::statement("INSERT INTO `{$destino}`.`{$nombre_tabla}_{$sufijo}` SELECT * FROM `{$origen}`.`{$nombre_tabla}`");
+                DB::statement("INSERT INTO `{$destino}`.`{$prefijo}_{$nombre_tabla}` SELECT * FROM `{$origen}`.`{$nombre_tabla}`");
 
                 $bar->advance();
             }
@@ -92,11 +92,11 @@ class CloneBaseDatosCommand extends Command
             foreach ($relaciones as $fk) {
                 // Si la FK apuntaba a la base vieja, la redirigimos a la nueva.
                 // Si apuntaba a cualquier otro lado (incluso a la destino original), la dejamos quieta.
-                $referenced_table_name = ($fk->REFERENCED_TABLE_SCHEMA == $origen) ? "{$fk->REFERENCED_TABLE_NAME}_{$sufijo}" : $fk->REFERENCED_TABLE_NAME;
+                $referenced_table_name = ($fk->REFERENCED_TABLE_SCHEMA == $origen) ? "{$prefijo}_{$fk->REFERENCED_TABLE_NAME}" : $fk->REFERENCED_TABLE_NAME;
 
                 try {
-                    $sql = "ALTER TABLE `{$destino}`.`{$fk->TABLE_NAME}_{$sufijo}` 
-                            ADD CONSTRAINT `{$fk->CONSTRAINT_NAME}_{$sufijo}` 
+                    $sql = "ALTER TABLE `{$destino}`.`{$prefijo}_{$fk->TABLE_NAME}` 
+                            ADD CONSTRAINT `{$fk->CONSTRAINT_NAME}_{$prefijo}` 
                             FOREIGN KEY (`{$fk->COLUMN_NAME}`) 
                             REFERENCES `{$fk->REFERENCED_TABLE_SCHEMA}`.`{$referenced_table_name}` (`{$fk->REFERENCED_COLUMN_NAME}`)
                             ON DELETE RESTRICT ON UPDATE CASCADE";
@@ -144,15 +144,15 @@ class CloneBaseDatosCommand extends Command
                     $nuevo_sql = preg_replace('/DEFINER=`[^`]+`@`[^`]+`/', '', $create_view_sql);
                                         
                     // Regex para encontrar patrones: `base_datos_origen`.`tabla`
-                    // Función callback para decidir si agregamos sufijo o no
+                    // Función callback para decidir si agregamos prefijo o no
                     $nuevo_sql = preg_replace_callback(
                         "/`{$origen}`\.`([^`]+)`/", // Busca: `base_datos_origen`.`tabla`
-                        function ($matches) use ($destino, $sufijo, $lista_tablas_reales) {
+                        function ($matches) use ($destino, $prefijo, $lista_tablas_reales) {
                             $nombre_tabla_clonada = $matches[1]; // El nombre de la tabla
                             
-                            // Si el nombre está en la lista de tablas reales, le pegamos el sufijo
+                            // Si el nombre está en la lista de tablas reales, le pegamos el prefijo
                             if (in_array($nombre_tabla_clonada, $lista_tablas_reales)) {
-                                return "`{$destino}`.`{$nombre_tabla_clonada}_{$sufijo}`";
+                                return "`{$destino}`.`{$prefijo}_{$nombre_tabla_clonada}`";
                             }
                             
                             // Si no es tabla (es otra vista), solo cambiamos la BD
