@@ -1,10 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Http\Controllers\InmaController;
-use Illuminate\Support\Arr;
+use App\Services\InmaService;
 use Illuminate\Support\Facades\DB;
 
 class InmaCommand extends Command
@@ -21,181 +22,105 @@ class InmaCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Importa marcas, modelos y versiones desde la API de INMA a la base de datos de forma optimizada';
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(InmaService $_InmaService)
     {
-
         $this->info('Iniciando importación de versiones de Inma...');
         $this->newLine();
         $this->info('Obteniendo detalles de INMA...');
 
-        $_inmaController = app(InmaController::class);
-        $marcas = $_inmaController->getMarcas()->getData();
-        $modelos = $_inmaController->getModelos()->getData();
-        $versiones = $_inmaController->getVersiones()->getData();
+        try {
+            $versiones = $_InmaService->getPreparedVersiones();
+        } catch (\Exception $e) {
+            $this->error('Error al obtener datos de INMA: ' . $e->getMessage());
+            return self::FAILURE;
+        }
 
         $this->info('Versiones obtenidas...');
+        $this->info('Comparando datos con la base de datos...');
 
-        foreach ( $versiones as $version ) {
-            $marca = Arr::first($marcas, function ($marca) use ($version) {
-                return $marca->marca_codigo == $version->marca_codigo;
-            });
+        $diferencias = $_InmaService->compareInmaData($versiones);
 
-            $modelo = Arr::first($modelos, function ($modelo) use ($version) {
-                return $modelo->marca_codigo == $version->marca_codigo && $modelo->modelo_codigo == $version->modelo_codigo;
-            });
+        $marcas_nuevas = $diferencias['marcas'];
+        $modelos_nuevos = $diferencias['modelos'];
+        $versiones_nuevas = $diferencias['versiones'];
 
-            $version->marca_descripcion = $marca->marca_descripcion;
-            $version->modelo_descripcion = $modelo->modelo_descripcion;
+        if (count($marcas_nuevas) === 0 && count($modelos_nuevos) === 0 && count($versiones_nuevas) === 0) {
+            $this->info('La base de datos está al día. No hay nuevos registros para importar.');
+            return self::SUCCESS;
         }
 
-        $this->newLine();
-        $this->info('Insertando marcas nuevas...');
-        $bar = $this->output->createProgressBar(count($versiones));
-        $bar->start();
+        // Insertar marcas nuevas
+        if (count($marcas_nuevas) > 0) {
+            $this->newLine();
+            $this->info('Insertando marcas nuevas...');
+            $bar = $this->output->createProgressBar(count($marcas_nuevas));
+            $bar->start();
 
-        foreach ( $versiones as $version ) {
-            $this->consultarMarcasExistentes($version->marca_codigo, $version->marca_descripcion);
-            $bar->advance();
-        }
-
-        $bar->finish();
-
-        $this->newLine();
-        $this->info('Insertando modelos nuevas...');
-        $bar = $this->output->createProgressBar(count($versiones));
-        $bar->start();
-
-        foreach ( $versiones as $version ) {
-            $this->consultarModelosExistentes(
-                $version->marca_codigo,
-                $version->modelo_codigo,
-                $version->modelo_descripcion
-            );
-            $bar->advance();
-        }
-
-        $bar->finish();
-
-        $this->newLine();
-        $this->info('Insertando versiones nuevas...');
-        $bar = $this->output->createProgressBar(count($versiones));
-        $bar->start();
-
-        foreach ( $versiones as $version ) {
-            $this->consultarVersionesExistentes(
-                $version->marca_codigo,
-                $version->modelo_codigo,
-                $version->civi,
-                $version->anio_fabricacion,
-                $version->version_descripcion
-            );
-            $bar->advance();
-        }
-
-        $bar->finish();
-
-        $this->newLine();
-        $this->info('Nuevas versiones insertadas exitosamente.');
-    }
-
-    /**
-     * Consulta si la marca existe en la base de datos
-     * 
-     * @param string $marca_codigo
-     * @param string $marca_descripcion
-     * @return void
-     */
-    public function consultarMarcasExistentes(string $marca_codigo, string $marca_descripcion)
-    {
-        DB::transaction(function () use ($marca_codigo, $marca_descripcion) {
-            $consultar_marcas = DB::connection('mysql_automovil')->table('marcas')
-            ->where('cod_marca', $marca_codigo)
-            ->where('descripcion', 'LIKE', "%{$marca_descripcion}%")
-            ->exists();
-
-            if ( !$consultar_marcas ) {
-                DB::connection('mysql_automovil')->table('marcas')
-                ->insert([
-                    'cod_marca' => $marca_codigo,
-                    'descripcion' => $marca_descripcion,
+            foreach ($marcas_nuevas as $marca) {
+                DB::connection('mysql_automovil')->table('marcas')->insert([
+                    'cod_marca' => $marca['cod_marca'],
+                    'descripcion' => $marca['descripcion'],
                     'created_at' => now()->format('Y-m-d H:i:s'),
                     'updated_at' => now()->format('Y-m-d H:i:s'),
                 ]);
+                $bar->advance();
             }
-        });
-    }
 
-    /**
-     * Consulta si el modelo existe en la base de datos
-     * 
-     * @param string $marca_codigo
-     * @param string $modelo_codigo
-     * @param string $modelo_descripcion
-     * @return void
-     */
-    public function consultarModelosExistentes(string $marca_codigo, string $modelo_codigo, string $modelo_descripcion)
-    {
-        DB::transaction(function () use ($marca_codigo, $modelo_codigo, $modelo_descripcion) {
-            $consultar_modelos = DB::connection('mysql_automovil')->table('modelos')
-            ->where('cod_marca', $marca_codigo)
-            ->where('cod_modelo', $modelo_codigo)
-            ->where('descripcion', 'LIKE', "%{$modelo_descripcion}%")
-            ->exists();
+            $bar->finish();
+        }
 
-            if ( !$consultar_modelos ) {
-                DB::connection('mysql_automovil')->table('modelos')
-                ->insert([
-                    'cod_marca' => $marca_codigo,
-                    'cod_modelo' => $modelo_codigo,
-                    'descripcion' => $modelo_descripcion,
+        // Insertar modelos nuevos
+        if (count($modelos_nuevos) > 0) {
+            $this->newLine();
+            $this->info('Insertando modelos nuevos...');
+            $bar = $this->output->createProgressBar(count($modelos_nuevos));
+            $bar->start();
+
+            foreach ($modelos_nuevos as $modelo) {
+                DB::connection('mysql_automovil')->table('modelos')->insert([
+                    'cod_marca' => $modelo['cod_marca'],
+                    'cod_modelo' => $modelo['cod_modelo'],
+                    'descripcion' => $modelo['descripcion'],
                     'created_at' => now()->format('Y-m-d H:i:s'),
                     'updated_at' => now()->format('Y-m-d H:i:s'),
                 ]);
+                $bar->advance();
             }
-        });
-    }
 
-    /**
-     * Consulta si la version existe en la base de datos
-     * 
-     * @param string $marca_codigo
-     * @param string $modelo_codigo
-     * @param string $civi
-     * @param int $anio_vehiculo
-     * @return void
-     */
-    public function consultarVersionesExistentes(
-        string $marca_codigo, 
-        string $modelo_codigo, 
-        string $civi, 
-        int $anio_vehiculo, 
-        string $version_descripcion
-    ) {
-        DB::transaction(function () use ($marca_codigo, $modelo_codigo, $civi, $anio_vehiculo, $version_descripcion) {
-            $consultar_versiones = DB::connection('mysql_automovil')->table('versiones')
-            ->where('cod_marca', $marca_codigo)
-            ->where('cod_modelo', $modelo_codigo)
-            ->where('civi', $civi)
-            ->where('anio_vehiculo', $anio_vehiculo)
-            ->exists();
+            $bar->finish();
+        }
 
-            if ( !$consultar_versiones ) {
-                DB::connection('mysql_automovil')->table('versiones')
-                ->insert([
-                    'cod_marca' => $marca_codigo,
-                    'cod_modelo' => $modelo_codigo,
-                    'civi' => $civi,
-                    'descripcion' => $version_descripcion,
-                    'anio_vehiculo' => $anio_vehiculo,
+        // Insertar versiones nuevas
+        if (count($versiones_nuevas) > 0) {
+            $this->newLine();
+            $this->info('Insertando versiones nuevas...');
+            $bar = $this->output->createProgressBar(count($versiones_nuevas));
+            $bar->start();
+
+            foreach ($versiones_nuevas as $version) {
+                DB::connection('mysql_automovil')->table('versiones')->insert([
+                    'cod_marca' => $version['cod_marca'],
+                    'cod_modelo' => $version['cod_modelo'],
+                    'civi' => $version['civi'],
+                    'descripcion' => $version['descripcion'],
+                    'anio_vehiculo' => $version['anio_vehiculo'],
                     'created_at' => now()->format('Y-m-d H:i:s'),
                     'updated_at' => now()->format('Y-m-d H:i:s'),
                 ]);
+                $bar->advance();
             }
-        });
+
+            $bar->finish();
+        }
+
+        $this->newLine();
+        $this->info('Nuevas marcas, modelos y versiones insertadas exitosamente.');
+
+        return self::SUCCESS;
     }
 }
