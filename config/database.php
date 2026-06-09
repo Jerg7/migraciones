@@ -63,6 +63,46 @@ return [
             ]) : [],
         ],
 
+        'mysql_qa' => [
+            'driver' => 'mysql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST_QA', '127.0.0.1'),
+            'port' => env('DB_PORT_QA', '3306'),
+            'database' => env('DB_DATABASE_QA', 'laravel'),
+            'username' => env('DB_USERNAME_QA', 'root'),
+            'password' => env('DB_PASSWORD_QA', ''),
+            'unix_socket' => env('DB_SOCKET_QA', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'mysql_prod' => [
+            'driver' => 'mysql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST_PROD', '127.0.0.1'),
+            'port' => env('DB_PORT_PROD', '3306'),
+            'database' => env('DB_DATABASE_PROD', 'laravel'),
+            'username' => env('DB_USERNAME_PROD', 'root'),
+            'password' => env('DB_PASSWORD_PROD', ''),
+            'unix_socket' => env('DB_SOCKET_PROD', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mysql_personas' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),

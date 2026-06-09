@@ -1,0 +1,253 @@
+========================================================================
+REPORTE DE COMPARACIÓN DE BASES DE DATOS (QA vs PROD)
+========================================================================
+Fecha: 2026-06-09 20:29:53
+Conexión QA: mysql_qa (Base de datos: ridosm_general)
+Conexión PROD: mysql_prod (Base de datos: ridosm_general)
+========================================================================
+
+1. TABLAS QUE EXISTEN EN QA PERO NO EN PROD:
+------------------------------------------------------------------------
+- anticipos_contratos
+- descripciones_permisos
+- detalles_cuentas
+- detalles_pagos_masivos
+- ingresos_anticipos
+- memos_administrativos_pagos_reembolso
+- memos_administrativos_registro_pagos
+- pagos_masivos_generados
+- prod_alergias
+- prod_alergias_terceros
+- prod_aperturas_anticipos
+- prod_aperturas_anticipos_coberturas
+- prod_archivos_terceros
+- prod_area_seguro
+- prod_areas_seguros_coberturas
+- prod_areas_seguros_servicios
+- prod_areas_seguros_tipos_contratos
+- prod_auditoria
+- prod_auditoria_api
+- prod_auditoria_user
+- prod_auto_contratos_versiones
+- prod_bancos
+- prod_cache
+- prod_cache_locks
+- prod_carga_correo
+- prod_cargos_publicos
+- prod_categoria_interna
+- prod_categoria_proveedor
+- prod_certificados_titulares_errores
+- prod_ciudades
+- prod_coberturas
+- prod_colores
+- prod_contratantes
+- prod_correspondencia_documentos_audit
+- prod_correspondencias
+- prod_correspondencias_files
+- prod_cuentas_bancarias
+- prod_datos_bancarios_proveedores
+- prod_datos_finacieros_proveedores
+- prod_datos_servicios_proveedores
+- prod_declaraciones_autorizadas_proveedores
+- prod_deducciones
+- prod_descripcion_recibo
+- prod_detalle_usuario
+- prod_detalles_presupuesto_solicitudes_servicios
+- prod_directorio_cuenta_bancarias
+- prod_dosis
+- prod_dosis_presentaciones
+- prod_email_verifications
+- prod_estados
+- prod_estatus_poliza
+- prod_estatus_recibo
+- prod_estatus_siniestros
+- prod_estatus_usuario
+- prod_estatus_versiones_contrato
+- prod_facturas_proveedores
+- prod_facturas_proveedores_files
+- prod_facturas_proveedores_validaciones
+- prod_failed_jobs
+- prod_firmas_autorizadas_proveedores
+- prod_forma_pago
+- prod_grupos_sanguineos
+- prod_impuestos
+- prod_intermediarios
+- prod_job_batches
+- prod_jobs
+- prod_laboratorios
+- prod_listado_suma_asegurada
+- prod_medicamentos
+- prod_medicamentos_solicitudes_servicios
+- prod_mensajes_categorias_reversos
+- prod_messages
+- prod_migrations
+- prod_model_has_permissions
+- prod_model_has_roles
+- prod_modulos_web
+- prod_movimientos_anticipos
+- prod_municipios
+- prod_municipios_tmp
+- prod_niveles_estudios
+- prod_nomina_accionaria_proveedores
+- prod_oauth_access_tokens
+- prod_oauth_auth_codes
+- prod_oauth_clients
+- prod_oauth_personal_access_clients
+- prod_oauth_refresh_tokens
+- prod_paises
+- prod_parentesco
+- prod_parroquias
+- prod_participations
+- prod_password_reset_tokens
+- prod_password_resets
+- prod_patologias
+- prod_patologias_terceros
+- prod_permissions
+- prod_personal_access_tokens
+- prod_personas_contactos
+- prod_personas_contratos_versiones
+- prod_personas_contratos_versiones_backup
+- prod_personas_restituciones_periodos
+- prod_preguntas_seguridad
+- prod_preguntas_seguridad_solicitud_pago
+- prod_presentaciones
+- prod_principios_activos
+- prod_profesiones
+- prod_proveedor
+- prod_proveedores_escaner_facturas
+- prod_proveedores_files
+- prod_qr_trabajadores_sm
+- prod_ramo
+- prod_rangos_mensuales
+- prod_recursos_digitales
+- prod_referencias_bancarias_proveedores
+- prod_referencias_comerciales_proveedores
+- prod_relaciones_solicitudes_pagos
+- prod_renovaciones_anticipos
+- prod_representante_legal_proveedores
+- prod_representantes_legales
+- prod_role
+- prod_role_has_permissions
+- prod_roles
+- prod_roles_servicios_siniestro
+- prod_rooms
+- prod_rrhh_antecedentes_servicios
+- prod_rrhh_cargos
+- prod_rrhh_conceptos_salariales
+- prod_rrhh_coordinaciones
+- prod_rrhh_egresos
+- prod_rrhh_empleados
+- prod_rrhh_empleados_contratos
+- prod_rrhh_empleados_equipos
+- prod_rrhh_empleados_paquetes_salariales
+- prod_rrhh_empleados_terceros
+- prod_rrhh_gerencias
+- prod_rrhh_ingresos
+- prod_rrhh_propiedades
+- prod_rrhh_vehiculos
+- prod_sector
+- prod_seguridad_usuarios
+- prod_servicios_terceros
+- prod_sessions
+- prod_sistemas_web
+- prod_solicitudes_servicios
+- prod_solicitudes_servicios_facturas_reembolso
+- prod_solicitudes_servicios_historial
+- prod_status_plan_contratante
+- prod_sucursal
+- prod_tasacambiaria
+- prod_terceros
+- prod_terceros_perfiles
+- prod_tipo_actividad_economica
+- prod_tipo_agotamiento
+- prod_tipo_contrato
+- prod_tipo_cuenta
+- prod_tipo_documento
+- prod_tipo_empleado
+- prod_tipo_empresas
+- prod_tipo_estado_civil
+- prod_tipo_estructura
+- prod_tipo_forma_pago
+- prod_tipo_moneda
+- prod_tipo_movimiento
+- prod_tipo_ocupacion
+- prod_tipo_pagos
+- prod_tipo_plan
+- prod_tipo_procedencia_ingresos
+- prod_tipo_proveedor
+- prod_tipo_servicio_cobertura
+- prod_tratamientos
+- prod_user_disponibility
+- prod_user_has_record
+- prod_user_has_record_old
+- prod_user_record_visibility
+- prod_users
+- prod_users_contratantes
+- prod_users_proveedores
+- prod_usuarios
+- prod_usuarios_token
+- prod_wallet
+- sistemas_descripcion_permisos
+- users_passwords
+
+2. COLUMNAS QUE EXISTEN EN QA PERO NO EN PROD (EN TABLAS COMUNES):
+------------------------------------------------------------------------
+[Tabla: aperturas_anticipos]
+  - tipo_contrato
+  - tipo_plan
+[Tabla: movimientos_anticipos]
+  - anticipo_contrato_id
+  - ingreso_anticipo_id
+[Tabla: users_proveedores]
+  - proveedor_id_old
+
+3. COLUMNAS CON DIFERENCIAS ESTRUCTURALES ENTRE QA Y PROD:
+------------------------------------------------------------------------
+[Tabla: alergias]
+  [Columna: created_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+  [Columna: updated_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+[Tabla: alergias_terceros]
+  [Columna: created_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+  [Columna: updated_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+[Tabla: grupos_sanguineos]
+  [Columna: created_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+  [Columna: updated_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+[Tabla: medicamentos_solicitudes_servicios]
+  [Columna: precio_unitario]
+    * Tipo: QA='decimal(15,2)', PROD='decimal(20,2)'
+  [Columna: monto_amparado]
+    * Tipo: QA='decimal(15,2)', PROD='decimal(20,2)'
+[Tabla: movimientos_anticipos]
+  [Columna: estatus]
+    * Nulabilidad: QA='NULL', PROD='NOT NULL'
+    * Por defecto: QA='', PROD='ACTIVO'
+[Tabla: patologias]
+  [Columna: created_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+  [Columna: updated_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+[Tabla: patologias_terceros]
+  [Columna: created_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+  [Columna: updated_at]
+    * Por defecto: QA='', PROD='CURRENT_TIMESTAMP'
+
+4. ÍNDICES QUE EXISTEN EN QA PERO NO EN PROD:
+------------------------------------------------------------------------
+[Tabla: movimientos_anticipos]
+  - fk_movimientos_anticipos_anticipo_contrato_id (No Único, Columnas: [anticipo_contrato_id])
+  - fk_movimientos_anticipos_ingreso_anticipo_id (No Único, Columnas: [ingreso_anticipo_id])
+[Tabla: users_proveedores]
+  - fk_user_proveedor_proveedor (No Único, Columnas: [proveedor_id_old])
+
+5. LLAVES FORÁNEAS QUE EXISTEN EN QA PERO NO EN PROD:
+------------------------------------------------------------------------
+[Tabla: movimientos_anticipos]
+  - fk_movimientos_anticipos_anticipo_contrato_id (Columna: [anticipo_contrato_id] -> anticipos_contratos.[id], On Update: cascade, On Delete: restrict)
+  - fk_movimientos_anticipos_ingreso_anticipo_id (Columna: [ingreso_anticipo_id] -> ingresos_anticipos.[id], On Update: cascade, On Delete: restrict)
