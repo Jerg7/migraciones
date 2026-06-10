@@ -30,6 +30,9 @@ class CompareDbCommand extends Command
      */
     public function handle(): int
     {
+        // Aumentar el límite de memoria para procesos de clonación grandes
+        ini_set('memory_limit', '10G');
+
         $this->info("=== COMPARADOR Y CLONADOR DE BASES DE DATOS (QA vs PROD) ===");
 
         // 1. Obtener y configurar conexiones
@@ -546,6 +549,10 @@ class CompareDbCommand extends Command
         // Desactivar FK
         DB::connection($qa_conn)->statement('SET FOREIGN_KEY_CHECKS=0;');
 
+        // Desactivar query log para evitar consumo de memoria
+        DB::connection($qa_conn)->disableQueryLog();
+        DB::connection($prod_conn)->disableQueryLog();
+
         $bar = $this->output->createProgressBar(count($prod_tables));
         $bar->start();
 
@@ -586,12 +593,13 @@ class CompareDbCommand extends Command
                 $lines = explode("\n", $create_sql);
                 $clean_lines = [];
                 foreach ($lines as $line) {
-                    if (preg_match('/^\s*CONSTRAINT\s+`([^`]+)`\s+FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+`([^`]+)`\s*\(([^)]+)\)(.*)$/i', $line, $matches)) {
+                    if (preg_match('/^\s*CONSTRAINT\s+`([^`]+)`\s+FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+(?:`([^`]+)`\.)?`([^`]+)`\s*\(([^)]+)\)(.*)$/i', $line, $matches)) {
                         $fk_name = $matches[1];
                         $fk_cols = $matches[2];
-                        $ref_table = $matches[3];
-                        $ref_cols = $matches[4];
-                        $fk_options = $matches[5];
+                        $ref_db = $matches[3];
+                        $ref_table = $matches[4];
+                        $ref_cols = $matches[5];
+                        $fk_options = $matches[6];
 
                         // Renombrar FK y tabla de destino si es necesario
                         $destination_fk_name = ($opcion === 'Prefijo en el nombre de las tablas (ej: prod_usuarios)') ? $prefix . $fk_name : $fk_name;
@@ -604,7 +612,15 @@ class CompareDbCommand extends Command
 
                         $destination_ref_table = ($opcion === 'Prefijo en el nombre de las tablas (ej: prod_usuarios)') ? $prefix . $ref_table : $ref_table;
 
-                        $fk_sql = "ALTER TABLE `{$destination_table}` ADD CONSTRAINT `{$destination_fk_name}` FOREIGN KEY ({$fk_cols}) REFERENCES `{$destination_ref_table}` ({$ref_cols}){$fk_options}";
+                        if (!empty($ref_db)) {
+                            // Si se aplica el prefijo al nombre de la base de datos, prefijamos la base de datos referenciada
+                            $destination_ref_db = ($opcion === 'Prefijo en el nombre de la base de datos (ej: crear copia_base_datos)')
+                                ? $prefix . $ref_db
+                                : $ref_db;
+                            $fk_sql = "ALTER TABLE `{$destination_table}` ADD CONSTRAINT `{$destination_fk_name}` FOREIGN KEY ({$fk_cols}) REFERENCES `{$destination_ref_db}`.`{$destination_ref_table}` ({$ref_cols}){$fk_options}";
+                        } else {
+                            $fk_sql = "ALTER TABLE `{$destination_table}` ADD CONSTRAINT `{$destination_fk_name}` FOREIGN KEY ({$fk_cols}) REFERENCES `{$destination_ref_table}` ({$ref_cols}){$fk_options}";
+                        }
                         
                         // Limpiar comas finales de la definición de FK
                         $fk_sql = rtrim($fk_sql, ',');
@@ -651,25 +667,49 @@ class CompareDbCommand extends Command
                     }
 
                     if (!$copiado_exitoso) {
-                        $query = DB::connection($prod_conn)->table($table);
-                        if ($limite_datos !== null) {
-                            $query->limit($limite_datos);
-                        }
-                        $rows = $query->cursor();
-                        
-                        $chunk = [];
-                        $chunk_size = 1000;
+                        $isMysql = DB::connection($prod_conn)->getDriverName() === 'mysql';
+                        $pdo = null;
+                        $originalBuffered = null;
 
-                        foreach ($rows as $row) {
-                            $chunk[] = (array) $row;
-                            if (count($chunk) >= $chunk_size) {
-                                DB::connection($qa_conn)->table($destination_table)->insert($chunk);
-                                $chunk = [];
+                        if ($isMysql) {
+                            try {
+                                $pdo = DB::connection($prod_conn)->getPdo();
+                                $originalBuffered = $pdo->getAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY);
+                                $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+                            } catch (\Exception $e) {
+                                $pdo = null;
                             }
                         }
 
-                        if (!empty($chunk)) {
-                            DB::connection($qa_conn)->table($destination_table)->insert($chunk);
+                        try {
+                            $query = DB::connection($prod_conn)->table($table);
+                            if ($limite_datos !== null) {
+                                $query->limit($limite_datos);
+                            }
+                            $rows = $query->cursor();
+                            
+                            $chunk = [];
+                            $chunk_size = 1000;
+
+                            foreach ($rows as $row) {
+                                $chunk[] = (array) $row;
+                                if (count($chunk) >= $chunk_size) {
+                                    DB::connection($qa_conn)->table($destination_table)->insert($chunk);
+                                    $chunk = [];
+                                }
+                            }
+
+                            if (!empty($chunk)) {
+                                DB::connection($qa_conn)->table($destination_table)->insert($chunk);
+                            }
+                        } finally {
+                            if ($isMysql && $pdo !== null) {
+                                try {
+                                    $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $originalBuffered);
+                                } catch (\Exception $e) {
+                                    // Ignorar errores al restaurar
+                                }
+                            }
                         }
                     }
                 }
