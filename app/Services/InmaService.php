@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use RicorocksDigitalAgency\Soap\Facades\Soap;
 
@@ -15,6 +14,8 @@ class InmaService
     private string $password;
     private string $user_web;
     private string $password_web;
+    private array $marcas_catalogo = [];
+    private array $modelos_catalogo = [];
 
     public function __construct()
     {
@@ -153,6 +154,14 @@ class InmaService
     }
 
     /**
+     * Normaliza un texto para comparar (espacios y mayúsculas/minúsculas)
+     */
+    private function normalizar(mixed $texto): string
+    {
+        return mb_strtoupper(trim((string) preg_replace('/\s+/u', ' ', (string) $texto)));
+    }
+
+    /**
      * Obtiene las versiones preparadas con su marca y modelo asociados
      *
      * @throws \Exception
@@ -160,28 +169,29 @@ class InmaService
      */
     public function getPreparedVersiones(): array
     {
-        $marcas = $this->getMarcas();
-        $modelos = $this->getModelos();
+        $this->marcas_catalogo = $this->getMarcas();
+        $this->modelos_catalogo = $this->getModelos();
         $versiones = $this->getVersiones();
 
-        $marcas_obj = json_decode(json_encode($marcas));
-        $modelos_obj = json_decode(json_encode($modelos));
-        $versiones_obj = json_decode(json_encode($versiones));
-
-        foreach ($versiones_obj as $version) {
-            $marca = Arr::first($marcas_obj, function ($marca) use ($version) {
-                return $marca->marca_codigo == $version->marca_codigo;
-            });
-
-            $modelo = Arr::first($modelos_obj, function ($modelo) use ($version) {
-                return $modelo->marca_codigo == $version->marca_codigo && $modelo->modelo_codigo == $version->modelo_codigo;
-            });
-
-            $version->marca_descripcion = $marca ? $marca->marca_descripcion : '';
-            $version->modelo_descripcion = $modelo ? $modelo->modelo_descripcion : '';
+        // Índices por código: evita el O(n*m) de buscar con Arr::first por cada versión
+        $marcas_idx = [];
+        foreach ($this->marcas_catalogo as $marca) {
+            $marcas_idx[$marca['marca_codigo']] ??= $marca['marca_descripcion'];
         }
 
-        return $versiones_obj;
+        $modelos_idx = [];
+        foreach ($this->modelos_catalogo as $modelo) {
+            $modelos_idx[$modelo['marca_codigo'] . $modelo['modelo_codigo']] ??= $modelo['modelo_descripcion'];
+        }
+
+        $resultado = [];
+        foreach ($versiones as $version) {
+            $version['marca_descripcion'] = $marcas_idx[$version['marca_codigo']] ?? '';
+            $version['modelo_descripcion'] = $modelos_idx[$version['marca_codigo'] . $version['modelo_codigo']] ?? '';
+            $resultado[] = (object) $version;
+        }
+
+        return $resultado;
     }
 
     /**
@@ -192,98 +202,79 @@ class InmaService
      */
     public function compareInmaData(array $versiones): array
     {
-        $existing_marcas = DB::connection('mysql_automovil')->table('marcas')
-            ->select('cod_marca', 'descripcion')
-            ->get()
-            ->groupBy('cod_marca');
+        $db = DB::connection('mysql_automovil');
 
-        $existing_modelos = DB::connection('mysql_automovil')->table('modelos')
-            ->select('cod_marca', 'cod_modelo', 'descripcion')
-            ->get()
-            ->groupBy(fn($item) => "{$item->cod_marca}_{$item->cod_modelo}");
+        // Existentes indexados por llave normalizada (búsqueda O(1)); cursor() evita cargar todo en memoria
+        $existing_marcas = [];
+        foreach ($db->table('marcas')->select('cod_marca', 'descripcion')->cursor() as $row) {
+            $existing_marcas[$this->normalizar($row->cod_marca) . '|' . $this->normalizar($row->descripcion)] = true;
+        }
 
-        $existing_versiones = DB::connection('mysql_automovil')->table('versiones')
-            ->selectRaw("CONCAT(cod_marca, '_', cod_modelo, '_', civi, '_', anio_vehiculo) as version_key")
-            ->pluck('version_key')
-            ->flip()
-            ->toArray();
+        $existing_modelos = [];
+        foreach ($db->table('modelos')->select('cod_marca', 'cod_modelo', 'descripcion')->cursor() as $row) {
+            $existing_modelos[$this->normalizar($row->cod_marca) . '|' . $this->normalizar($row->cod_modelo) . '|' . $this->normalizar($row->descripcion)] = true;
+        }
+
+        // Llave construida en PHP: CONCAT en SQL devuelve NULL si algún campo es NULL
+        $existing_versiones = [];
+        foreach ($db->table('versiones')->select('cod_marca', 'cod_modelo', 'civi', 'anio_vehiculo')->cursor() as $row) {
+            $existing_versiones[$this->normalizar($row->cod_marca) . '|' . $this->normalizar($row->cod_modelo) . '|' . $this->normalizar($row->civi) . '|' . (int) $row->anio_vehiculo] = true;
+        }
 
         $marcas_nuevas = [];
         $modelos_nuevos = [];
         $versiones_nuevas = [];
 
-        $marcas_vistas = [];
-        $modelos_vistos = [];
-        $versiones_vistas = [];
+        $evaluar_marca = function (string $codigo, string $descripcion) use ($existing_marcas, &$marcas_nuevas) {
+            if ($descripcion === '') {
+                return;
+            }
+            $key = $this->normalizar($codigo) . '|' . $this->normalizar($descripcion);
+            if (!isset($existing_marcas[$key])) {
+                $marcas_nuevas[$key] = ['cod_marca' => $codigo, 'descripcion' => $descripcion];
+            }
+        };
+
+        $evaluar_modelo = function (string $marca, string $codigo, string $descripcion) use ($existing_modelos, &$modelos_nuevos) {
+            if ($descripcion === '') {
+                return;
+            }
+            $key = $this->normalizar($marca) . '|' . $this->normalizar($codigo) . '|' . $this->normalizar($descripcion);
+            if (!isset($existing_modelos[$key])) {
+                $modelos_nuevos[$key] = ['cod_marca' => $marca, 'cod_modelo' => $codigo, 'descripcion' => $descripcion];
+            }
+        };
+
+        // Catálogo completo de marcas y modelos (aunque no tengan versiones dentro del rango de años)
+        foreach ($this->marcas_catalogo as $m) {
+            $evaluar_marca($m['marca_codigo'], $m['marca_descripcion']);
+        }
+        foreach ($this->modelos_catalogo as $m) {
+            $evaluar_modelo($m['marca_codigo'], $m['modelo_codigo'], $m['modelo_descripcion']);
+        }
 
         foreach ($versiones as $version) {
-            $marca_codigo = $version->marca_codigo;
-            $marca_descripcion = $version->marca_descripcion;
-            $modelo_codigo = $version->modelo_codigo;
-            $modelo_descripcion = $version->modelo_descripcion;
-            $civi = $version->civi;
-            $anio_fabricacion = $version->anio_fabricacion;
-            $version_descripcion = $version->version_descripcion;
+            $evaluar_marca($version->marca_codigo, $version->marca_descripcion);
+            $evaluar_modelo($version->marca_codigo, $version->modelo_codigo, $version->modelo_descripcion);
 
-            // 1. Comparar marca
-            $marca_exists = isset($existing_marcas[$marca_codigo]) &&
-                $existing_marcas[$marca_codigo]->contains(function ($item) use ($marca_descripcion) {
-                    return stripos($item->descripcion, $marca_descripcion) !== false;
-                });
+            $version_key = $this->normalizar($version->marca_codigo) . '|' . $this->normalizar($version->modelo_codigo) . '|'
+                . $this->normalizar($version->civi) . '|' . (int) $version->anio_fabricacion;
 
-            if (!$marca_exists) {
-                $marca_key = $marca_codigo . '_' . $marca_descripcion;
-                if (!isset($marcas_vistas[$marca_key])) {
-                    $marcas_vistas[$marca_key] = true;
-                    $marcas_nuevas[] = [
-                        'cod_marca' => $marca_codigo,
-                        'descripcion' => $marca_descripcion,
-                    ];
-                }
-            }
-
-            // 2. Comparar modelo
-            $modelo_key_db = "{$marca_codigo}_{$modelo_codigo}";
-            $modelo_exists = isset($existing_modelos[$modelo_key_db]) &&
-                $existing_modelos[$modelo_key_db]->contains(function ($item) use ($modelo_descripcion) {
-                    return stripos($item->descripcion, $modelo_descripcion) !== false;
-                });
-
-            if (!$modelo_exists) {
-                $modelo_key = "{$marca_codigo}_{$modelo_codigo}_{$modelo_descripcion}";
-                if (!isset($modelos_vistos[$modelo_key])) {
-                    $modelos_vistos[$modelo_key] = true;
-                    $modelos_nuevos[] = [
-                        'cod_marca' => $marca_codigo,
-                        'cod_modelo' => $modelo_codigo,
-                        'descripcion' => $modelo_descripcion,
-                    ];
-                }
-            }
-
-            // 3. Comparar versión
-            $version_key_db = "{$marca_codigo}_{$modelo_codigo}_{$civi}_{$anio_fabricacion}";
-            $version_exists = isset($existing_versiones[$version_key_db]);
-
-            if (!$version_exists) {
-                $version_key = $version_key_db;
-                if (!isset($versiones_vistas[$version_key])) {
-                    $versiones_vistas[$version_key] = true;
-                    $versiones_nuevas[] = [
-                        'cod_marca' => $marca_codigo,
-                        'cod_modelo' => $modelo_codigo,
-                        'civi' => $civi,
-                        'descripcion' => trim($version_descripcion),
-                        'anio_vehiculo' => $anio_fabricacion,
-                    ];
-                }
+            if (!isset($existing_versiones[$version_key]) && !isset($versiones_nuevas[$version_key])) {
+                $versiones_nuevas[$version_key] = [
+                    'cod_marca' => $version->marca_codigo,
+                    'cod_modelo' => $version->modelo_codigo,
+                    'civi' => $version->civi,
+                    'descripcion' => trim($version->version_descripcion),
+                    'anio_vehiculo' => $version->anio_fabricacion,
+                ];
             }
         }
 
         return [
-            'marcas' => $marcas_nuevas,
-            'modelos' => $modelos_nuevos,
-            'versiones' => $versiones_nuevas,
+            'marcas' => array_values($marcas_nuevas),
+            'modelos' => array_values($modelos_nuevos),
+            'versiones' => array_values($versiones_nuevas),
         ];
     }
 }

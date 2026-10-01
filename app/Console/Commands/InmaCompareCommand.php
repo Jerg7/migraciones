@@ -28,6 +28,8 @@ class InmaCompareCommand extends Command
      */
     public function handle(InmaService $inma_service)
     {
+        ini_set('memory_limit', '1G');
+
         $this->info('Iniciando comparación de versiones de Inma...');
         $this->newLine();
         $this->info('Obteniendo detalles de INMA...');
